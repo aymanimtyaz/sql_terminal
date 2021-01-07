@@ -17,20 +17,25 @@ class connection:
     def close_con(self):
         self.con.close()
 
+def exit_routine(conn):
+    conn.close_con()
+    import sys
+    print('\n')
+    sys.exit(0)
 
 def get_connection_info():
 
     print('\n******************************* SQL TERMINAL *******************************')
-    dbname = input('Enter database name: ')
     host = input('Enter host: ')
     port = input('Enter port: ')
+    dbname = input('Enter database name: ')
     usr = input('Enter user: ')
     pw = getpass('Enter password: ')
     isolation_bool = ''
     while True:
         isolation_bool = input('Run with autocommit? (y/n): ')
         if isolation_bool == 'y' or isolation_bool == 'n':
-            break
+            break    
     print('\nConnecting to database...')
 
     if host == '' and port == '':
@@ -46,13 +51,22 @@ def get_connection_info():
 
 def terminal(conn):
     curs = conn.con.cursor()
-    print(f'Connected to database {conn.database} on {conn.host}')
+    print(f'Connected to database {conn.database} on {conn.host}\n')
     while True:
-        sql = input(f'\n{conn.user}@{conn.database}-$ ')
-        curs.execute(sql)
-        res = curs.fetchall()
-        for row in res:
-            print(row)
+        try:
+            sql = input(f'{conn.user}@{conn.database}-$ ')
+            curs.execute(sql)
+            res = curs.fetchall()
+            for row in res:
+                print(row)
+        except KeyboardInterrupt:
+            exit_routine(conn)
+        except Exception as e:
+            if str(e) == 'no results to fetch':
+                continue
+            print('ERROR: ', e)
+            if conn.iso_level == 'n':
+                conn.con.rollback()
 
 if __name__=='__main__':
     con = get_connection_info()
