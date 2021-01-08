@@ -9,8 +9,10 @@ class connection:
         self.user = user
         self.password = password
         self.host = host
+        self.port = port
         self.iso_level = iso_level
-        self.con = pg2.connect(database = self.database, host = self.host, user = self.user, password = self.password)
+        self.con = pg2.connect(database = self.database, host = self.host, port = self.port, user = self.user, 
+                               password = self.password, application_name = 'sql-terminal')
         if self.iso_level == 'y':
             self.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
@@ -19,19 +21,28 @@ class connection:
 
 def exit_routine(conn):
     conn.close_con()
-    import sys
     print('\n')
+    import sys
     sys.exit(0)
 
 def get_connection_info():
 
     print('\n******************************* SQL TERMINAL *******************************')
-    host = input('Enter host: ')
-    port = input('Enter port: ')
-    dbname = input('Enter database name: ')
-    usr = input('Enter user: ')
-    pw = getpass('Enter password: ')
-    isolation_bool = ''
+    host = input('Enter host (default: localhost): ')
+    port = input('Enter port (default: 5432): ')
+    dbname = ''; usr = ''; pw = ''; isolation_bool = ''
+    while True:
+        dbname = input('Enter database name: ')
+        if dbname != '':
+            break
+    while True:
+        usr = input('Enter user: ')
+        if usr != '':
+            break
+    while True:
+        pw = getpass('Enter password: ')
+        if pw != '':
+            break
     while True:
         isolation_bool = input('Run with autocommit? (y/n): ')
         if isolation_bool == 'y' or isolation_bool == 'n':
@@ -51,11 +62,12 @@ def get_connection_info():
 
 def terminal(conn):
     curs = conn.con.cursor()
-    print(f'Connected to database {conn.database} on {conn.host}\n')
+    print(f'Connected to database {conn.database} on {conn.host}:{conn.port}\n')
     while True:
         try:
             sql = input(f'{conn.user}@{conn.database}-$ ')
             curs.execute(sql)
+            print(curs.statusmessage)
             res = curs.fetchall()
             for row in res:
                 print(row)
