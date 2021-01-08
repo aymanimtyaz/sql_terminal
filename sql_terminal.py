@@ -20,28 +20,34 @@ class connection:
     def close_con(self):
         self.con.close()
 
+def execute_from_file(curs, argument):
+    sql = open(argument).read()
+    print('EXECUTING FROM FILE...\n')
+    print(sql, '\n')
+    curs.execute(sql)
+    print(curs.statusmessage)
+    curs.close()
+
 def exit_routine(conn):
     conn.close_con()
     print('\n') 
     sys.exit(0)
 
-def get_from_cli_arguments():
-    for argument in sys.argv[1:]:
-        if os.path.splitext(argument)[1] == '.json':
-            import json
-            credentials = json.loads(open(argument).read())
-            host = credentials["host"]
-            port = credentials["port"]
-            dbname = credentials["database"]
-            usr = credentials["username"]
-            pw = credentials["password"]
-            isolation_bool = credentials["autocommit"]
-            print("\u001b[33mhost:\u001b[0m", host)
-            print("\u001b[33mport:\u001b[0m", port)
-            print("\u001b[33mdatabase:\u001b[0m", dbname)
-            print("\u001b[33musername:\u001b[0m", usr)
-            print("\u001b[33mautocommit:\u001b[0m", isolation_bool)
-            return host, port, dbname, usr, pw, isolation_bool
+def get_from_cli_arguments(argument):
+    import json
+    credentials = json.loads(open(argument).read())
+    host = credentials["host"]
+    port = credentials["port"]
+    dbname = credentials["database"]
+    usr = credentials["username"]
+    pw = credentials["password"]
+    isolation_bool = credentials["autocommit"]
+    print("\u001b[33mhost:\u001b[0m", host)
+    print("\u001b[33mport:\u001b[0m", port)
+    print("\u001b[33mdatabase:\u001b[0m", dbname)
+    print("\u001b[33musername:\u001b[0m", usr)
+    print("\u001b[33mautocommit:\u001b[0m", isolation_bool)
+    return host, port, dbname, usr, pw, isolation_bool
 
 def get_interactive():
     host = input('Enter host (default: localhost): ')
@@ -69,10 +75,15 @@ def get_interactive():
 def get_connection_info():
 
     print('\n******************************* \u001b[32mSQL TERMINAL\u001b[0m *******************************')
-    if len(sys.argv) > 1:
-        host, port, dbname, usr, pw, isolation_bool = get_from_cli_arguments()
-    else:
+    creds_not_validated = True
+    for argument in sys.argv[1:]:
+        if os.path.splitext(argument)[1] == '.json':
+            host, port, dbname, usr, pw, isolation_bool = get_from_cli_arguments(argument)
+            creds_not_validated = False
+            break
+    if creds_not_validated:
         host, port, dbname, usr, pw, isolation_bool = get_interactive()
+
     print('\nConnecting to database...')
 
     if host == '' and port == '':
@@ -87,8 +98,13 @@ def get_connection_info():
     return conn
 
 def terminal(conn):
-    curs = conn.con.cursor()
     print(f'Connected to database \u001b[31m{conn.database}\u001b[0m on \u001b[36m{conn.host}:\u001b[33m{conn.port}\u001b[0m\n')
+    curs = conn.con.cursor()
+    if len(sys.argv) > 1:
+        for argument in sys.argv[1:]:
+            if os.path.splitext(argument)[1] == ('.sql' or '.txt'):
+                execute_from_file(curs, argument)
+                exit_routine(conn)
     while True:
         try:
             sql = input(f'\u001b[32m{conn.user}\u001b[37m@\u001b[34m{conn.database}-\u001b[0m$ ')
