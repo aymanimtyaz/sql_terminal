@@ -1,6 +1,7 @@
 import psycopg2 as pg2 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from getpass import getpass
+import sys, os
 
 class connection:
 
@@ -21,13 +22,28 @@ class connection:
 
 def exit_routine(conn):
     conn.close_con()
-    print('\n')
-    import sys
+    print('\n') 
     sys.exit(0)
 
-def get_connection_info():
+def get_from_cli_arguments():
+    for argument in sys.argv[1:]:
+        if os.path.splitext(argument)[1] == '.json':
+            import json
+            credentials = json.loads(open(argument).read())
+            host = credentials["host"]
+            port = credentials["port"]
+            dbname = credentials["database"]
+            usr = credentials["username"]
+            pw = credentials["password"]
+            isolation_bool = credentials["autocommit"]
+            print("\u001b[33mhost:\u001b[0m", host)
+            print("\u001b[33mport:\u001b[0m", port)
+            print("\u001b[33mdatabase:\u001b[0m", dbname)
+            print("\u001b[33musername:\u001b[0m", usr)
+            print("\u001b[33mautocommit:\u001b[0m", isolation_bool)
+            return host, port, dbname, usr, pw, isolation_bool
 
-    print('\n******************************* SQL TERMINAL *******************************')
+def get_interactive():
     host = input('Enter host (default: localhost): ')
     port = input('Enter port (default: 5432): ')
     dbname = ''; usr = ''; pw = ''; isolation_bool = ''
@@ -46,7 +62,17 @@ def get_connection_info():
     while True:
         isolation_bool = input('Run with autocommit? (y/n): ')
         if isolation_bool == 'y' or isolation_bool == 'n':
-            break    
+            break
+    
+    return host, port, dbname, usr, pw, isolation_bool
+
+def get_connection_info():
+
+    print('\n******************************* \u001b[32mSQL TERMINAL\u001b[0m *******************************')
+    if len(sys.argv) > 1:
+        host, port, dbname, usr, pw, isolation_bool = get_from_cli_arguments()
+    else:
+        host, port, dbname, usr, pw, isolation_bool = get_interactive()
     print('\nConnecting to database...')
 
     if host == '' and port == '':
@@ -62,10 +88,10 @@ def get_connection_info():
 
 def terminal(conn):
     curs = conn.con.cursor()
-    print(f'Connected to database {conn.database} on {conn.host}:{conn.port}\n')
+    print(f'Connected to database \u001b[31m{conn.database}\u001b[0m on \u001b[36m{conn.host}:\u001b[33m{conn.port}\u001b[0m\n')
     while True:
         try:
-            sql = input(f'{conn.user}@{conn.database}-$ ')
+            sql = input(f'\u001b[32m{conn.user}\u001b[37m@\u001b[34m{conn.database}-\u001b[0m$ ')
             curs.execute(sql)
             print(curs.statusmessage)
             res = curs.fetchall()
@@ -76,14 +102,10 @@ def terminal(conn):
         except Exception as e:
             if str(e) == 'no results to fetch':
                 continue
-            print('ERROR: ', e)
+            print('\u001b[31mERROR: \u001b[0m', e)
             if conn.iso_level == 'n':
                 conn.con.rollback()
 
 if __name__=='__main__':
     con = get_connection_info()
     terminal(con)
-
-
-
-
