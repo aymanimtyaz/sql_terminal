@@ -2,6 +2,7 @@ import psycopg2 as pg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from getpass import getpass
 import sys, os
+from tabulate import tabulate
 
 class connection:
 
@@ -109,10 +110,9 @@ def terminal(conn):
         try:
             sql = input(f'\u001b[32m{conn.user}\u001b[37m@\u001b[34m{conn.database}-\u001b[0m$ ')
             curs.execute(sql)
-            print(curs.statusmessage)
+            print(curs.statusmessage, '\n')
             res = curs.fetchall()
-            for row in res:
-                print(row)
+            print(tabulate(res, [desc[0] for desc in curs.description]), '\n')
         except KeyboardInterrupt:
             exit_routine(conn)
         except Exception as e:
