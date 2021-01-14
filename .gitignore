@@ -1,3 +1,4 @@
 *.json
 *.sql
 venv
+__pycache__
